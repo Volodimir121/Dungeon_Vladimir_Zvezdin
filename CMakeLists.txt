@@ -8,4 +8,8 @@ include_directories(.)
 add_executable(
         ${PROJECT_NAME}
         main.c
+        game.c
+        game.h
+        map.c
+        map.h
 )
