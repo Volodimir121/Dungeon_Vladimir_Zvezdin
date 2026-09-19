@@ -14,6 +14,7 @@ int main() {
     char command[16];
     int turn = 1;
 
+
     printf("Welcome to the Dungeon!\n");
     const size_t size = sizeof(map) / sizeof (const char*);
     for (size_t i = 0; i < size; i++)
