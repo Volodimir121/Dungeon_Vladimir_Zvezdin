@@ -12,4 +12,8 @@ add_executable(
         game.h
         map.c
         map.h
+        statushero.c
+        statushero.h
+        Hero.c
+        Hero.h
 )

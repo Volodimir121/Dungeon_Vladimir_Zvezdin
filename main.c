@@ -1,8 +1,7 @@
 #include "game.h"
 
-int main(void)
+int main()
 {
     run_game();
-
     return 0;
 }
