@@ -10,6 +10,9 @@ typedef struct
     unsigned int gold;
     unsigned int floor;
     unsigned int states;
+
+    int x;
+    int y;
 } Hero;
 
 void hero_init(Hero* hero);

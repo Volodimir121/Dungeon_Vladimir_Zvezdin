@@ -9,6 +9,9 @@ void hero_init(Hero* hero)
     hero->gold = 0;
     hero->floor = 1;
     hero->states = 0;
+    
+    hero->x = 2;
+    hero->y = 1;
 }
  
 void hero_take_damage(Hero* hero, int damage)

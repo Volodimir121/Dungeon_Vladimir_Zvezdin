@@ -15,35 +15,59 @@ typedef struct
     CommandFn fn;
 } Command;
 
+/* Общая логика для всех 4 направлений: считает целевую клетку,
+   проверяет границы+стену ДО обращения к карте, двигает героя и
+   подбирает золото, если оно там есть. */
+static int move_hero(Hero* hero, int dx, int dy, const char* direction)
+{
+    int new_x = hero->x + dx;
+    int new_y = hero->y + dy;
+
+    if (!map_can_enter(new_x, new_y))
+    {
+        printf("You can't go %s — something blocks the way.\n", direction);
+        return 0;
+    }
+
+    hero->x = new_x;
+    hero->y = new_y;
+
+    printf("You went %s.\n", direction);
+
+    if (map_get(hero->x, hero->y) == MAP_GOLD)
+    {
+        hero->gold++;
+        map_clear(hero->x, hero->y);
+        printf("You found gold! Total gold: %u\n", hero->gold);
+    }
+
+    return 0;
+}
+
 static int cmd_north(Hero* hero)
 {
-
-    printf("You went north.\n");
-    return 0;
+    return move_hero(hero, 0, -1, "north");
 }
 
 static int cmd_south(Hero* hero)
 {
-    printf("You went south.\n");
-    return 0;
+    return move_hero(hero, 0, 1, "south");
 }
 
 static int cmd_east(Hero* hero)
 {
-    printf("You went east.\n");
-    return 0;
+    return move_hero(hero, 1, 0, "east");
 }
 
 static int cmd_west(Hero* hero)
 {
-    printf("You went west.\n");
-    return 0;
+    return move_hero(hero, -1, 0, "west");
 }
 
 static int cmd_look(Hero* hero)
 {
     printf("You look around the dungeon.\n");
-    print_map();
+    map_print(hero->x, hero->y);
     return 0;
 }
 
@@ -75,6 +99,20 @@ static int cmd_hit(Hero* hero)
     return 0;
 }
 
+static int cmd_check(Hero* hero)
+{
+    if (map_check_reachable(hero->x, hero->y))
+    {
+        printf("The exit is reachable from here.\n");
+    }
+    else
+    {
+        printf("The exit is NOT reachable from here.\n");
+    }
+
+    return 0;
+}
+
 static int cmd_quit(Hero* hero)
 {
     return 1;
@@ -90,6 +128,7 @@ static const Command COMMANDS[] = {
     { "look",   "look around the dungeon",  cmd_look   },
     { "status", "show hero status",         cmd_status },
     { "hit",    "take damage (asks amount)",cmd_hit    },
+    { "check",  "check if exit is reachable", cmd_check },
     { "help",   "show this help",           cmd_help   },
     { "quit",   "exit the game",            cmd_quit   },
 };
@@ -99,7 +138,6 @@ static const size_t COMMAND_COUNT =
 
 static int cmd_help(Hero* hero)
 {
-
     printf("Available commands:\n");
 
     for (size_t i = 0; i < COMMAND_COUNT; i++)
@@ -109,7 +147,6 @@ static int cmd_help(Hero* hero)
 
     return 0;
 }
-
 
 static int process_command(const char* command, Hero* hero)
 {
@@ -139,7 +176,7 @@ void run_game()
     int turn = 1;
 
     printf("Welcome to the Dungeon!\n");
-    print_map();
+    map_print(hero.x, hero.y);
     printf("help - For all available commands @ - Player  # - Walls\n\n");
 
     while (1)
