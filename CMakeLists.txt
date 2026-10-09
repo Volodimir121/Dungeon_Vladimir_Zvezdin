@@ -16,4 +16,6 @@ add_executable(
         statushero.h
         Hero.c
         Hero.h
+        parcer.c
+        parcer.h
 )

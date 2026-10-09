@@ -1,6 +1,6 @@
 #include <stddef.h>
 
-#include "hero.h"
+#include "Hero.h"
 #include "map.h"
 
 void hero_init(Hero* hero)
