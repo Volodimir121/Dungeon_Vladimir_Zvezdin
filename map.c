@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdio.h>
 
 #include "map.h"
@@ -8,7 +9,7 @@ static char MAP[MAP_ROWS][MAP_COLS + 1] = {
     "#      #   $      E#",
     "#      #           #",
     "#      #      $    #",
-    "#                  #",
+    "#  $               #",
     "#            $     #",
     "####################"
 };
@@ -110,4 +111,68 @@ int map_check_reachable(int start_x, int start_y)
     }
 
     return explore(start_x, start_y);
+}
+
+MapGrid map_grid()
+{
+    return (MapGrid)MAP;
+}
+
+int map_cell_info(const char grid[][MAP_COLS + 1], int x, int y,
+                  CellType* out_type, int* out_passable)
+{
+    if (grid == NULL || out_type == NULL || out_passable == NULL)
+    {
+        return 0;
+    }
+
+    if (!map_in_bounds(x, y))
+    {
+        return 0;
+    }
+
+    char cell = grid[y][x];
+
+    switch (cell)
+    {
+    case MAP_WALL:
+        *out_type = CELL_WALL;
+        break;
+    case MAP_GOLD:
+        *out_type = CELL_GOLD;
+        break;
+    case MAP_EXIT:
+        *out_type = CELL_EXIT;
+        break;
+    default:
+        *out_type = CELL_FLOOR;
+        break;
+    }
+
+    *out_passable = (*out_type != CELL_WALL);
+
+    return 1;
+}
+
+static size_t grid_param_size(const char (*grid)[MAP_COLS + 1])
+{
+    return sizeof(grid);
+}
+
+void map_print_addresses(void)
+{
+    printf("-- map: addresses and sizes --\n");
+    printf("MAP (static, initialized)  : %p, sizeof = %zu\n",
+        (void*)MAP, sizeof(MAP));
+    printf("&MAP[0][0]                 : %p\n", (void*)&MAP[0][0]);
+    printf("&MAP[0][1]                 : %p (+%td byte)\n",
+        (void*)&MAP[0][1], &MAP[0][1] - &MAP[0][0]);
+    printf("&MAP[1][0]                 : %p (+%td bytes = one row)\n",
+        (void*)&MAP[1][0], &MAP[1][0] - &MAP[0][0]);
+    printf("&MAP[%d][%d]                : %p (last byte of the array)\n",
+        MAP_ROWS - 1, MAP_COLS, (void*)&MAP[MAP_ROWS - 1][MAP_COLS]);
+    printf("visited (static, zeroed)   : %p, sizeof = %zu\n",
+        (void*)visited, sizeof(visited));
+    printf("sizeof(grid) inside function: %zu (pointer, not array)\n",
+        grid_param_size(map_grid()));
 }

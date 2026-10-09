@@ -1,4 +1,6 @@
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "game.h"
@@ -6,6 +8,10 @@
 #include "map.h"
 #include "statushero.h"
 
+/* Указатель hero во всех cmd_* не проверяется на NULL: функции вызываются
+   только через process_command из run_game, которая передаёт адрес своей
+   локальной переменной (&hero) — он не может быть нулевым. Функции,
+   принимающие произвольные указатели (hero.c, map.c), проверяют их сами. */
 typedef int (*CommandFn)(Hero* hero);
 
 typedef struct
@@ -15,31 +21,49 @@ typedef struct
     CommandFn fn;
 } Command;
 
-/* Общая логика для всех 4 направлений: считает целевую клетку,
-   проверяет границы+стену ДО обращения к карте, двигает героя и
-   подбирает золото, если оно там есть. */
-static int move_hero(Hero* hero, int dx, int dy, const char* direction)
+/* Если герой стоит на золоте — забирает его и очищает клетку.
+   Состояние героя меняется через указатель (add_gold получает &hero->gold).
+   hero проверяется на NULL до первого разыменования. */
+static void pick_up_gold(Hero* hero)
 {
-    int new_x = hero->x + dx;
-    int new_y = hero->y + dy;
-
-    if (!map_can_enter(new_x, new_y))
+    if (hero == NULL)
     {
-        printf("You can't go %s — something blocks the way.\n", direction);
-        return 0;
+        return;
     }
 
-    hero->x = new_x;
-    hero->y = new_y;
+    CellType type;
+    int passable;
 
-    printf("You went %s.\n", direction);
-
-    if (map_get(hero->x, hero->y) == MAP_GOLD)
+    if (!map_cell_info(map_grid(), hero->x, hero->y, &type, &passable))
     {
-        hero->gold++;
+        return;
+    }
+
+    if (type == CELL_GOLD)
+    {
+        add_gold(&hero->gold, 1);
         map_clear(hero->x, hero->y);
         printf("You found gold! Total gold: %u\n", hero->gold);
     }
+}
+
+
+static int move_hero(Hero* hero, int dx, int dy, const char* direction)
+{
+    if (hero == NULL)
+    {
+        return 0;
+    }
+
+    if (!shift_position(&hero->x, &hero->y, dx, dy))
+    {
+        printf("You can't go %s - something blocks the way.\n", direction);
+        return 0;
+    }
+
+    printf("You went %s.\n", direction);
+
+    pick_up_gold(hero);
 
     return 0;
 }
@@ -88,17 +112,82 @@ static int cmd_status(Hero* hero)
 
 static int cmd_hit(Hero* hero)
 {
-    int damage;
+    int damage = 0;
 
     scanf("%d", &damage);
 
-    hero_take_damage(hero, damage);
+    if (!damage_health(&hero->health, damage))
+    {
+        printf("Invalid damage value.\n");
+        return 0;
+    }
 
     printf("You took %d damage.\n", damage);
     printf("Health: %d/%d\n", hero->health, hero->max_health);
     return 0;
 }
 
+static const char* cell_type_name(CellType type)
+{
+    switch (type)
+    {
+    case CELL_WALL: return "wall";
+    case CELL_GOLD: return "gold";
+    case CELL_EXIT: return "exit";
+    default:        return "floor";
+    }
+}
+
+/* Показывает тип и проходимость соседних клеток. Тип и признак
+   проходимости приходят из map_cell_info через два выходных параметра. */
+static int cmd_inspect(Hero* hero)
+{
+    static const struct
+    {
+        const char* name;
+        int dx;
+        int dy;
+    } DIRECTIONS[] = {
+        { "north", 0, -1 },
+        { "south", 0,  1 },
+        { "east",  1,  0 },
+        { "west", -1,  0 },
+    };
+
+    for (size_t i = 0; i < sizeof(DIRECTIONS) / sizeof(DIRECTIONS[0]); i++)
+    {
+        CellType type;
+        int passable;
+
+        if (map_cell_info(map_grid(), hero->x + DIRECTIONS[i].dx,
+                hero->y + DIRECTIONS[i].dy, &type, &passable))
+        {
+            printf("%-6s: %s, %s\n", DIRECTIONS[i].name,
+                cell_type_name(type), passable ? "passable" : "blocked");
+        }
+        else
+        {
+            printf("%-6s: outside the map\n", DIRECTIONS[i].name);
+        }
+    }
+
+    return 0;
+}
+
+static int cmd_addr(Hero* hero)
+{
+    int local = 0;
+
+    printf("-- game: addresses --\n");
+    map_print_addresses();
+    printf("local variable (stack)     : %p\n", (void*)&local);
+    printf("hero (stack of run_game)   : %p\n", (void*)hero);
+    printf("  &hero->gold              : %p\n", (void*)&hero->gold);
+    printf("  &hero->x / &hero->y      : %p / %p\n",
+        (void*)&hero->x, (void*)&hero->y);
+
+    return 0;
+}
 static int cmd_check(Hero* hero)
 {
     if (map_check_reachable(hero->x, hero->y))
@@ -129,6 +218,8 @@ static const Command COMMANDS[] = {
     { "status", "show hero status",         cmd_status },
     { "hit",    "take damage (asks amount)",cmd_hit    },
     { "check",  "check if exit is reachable", cmd_check },
+    { "inspect", "describe neighbouring cells", cmd_inspect },
+    { "addr",   "print memory addresses",   cmd_addr   },
     { "help",   "show this help",           cmd_help   },
     { "quit",   "exit the game",            cmd_quit   },
 };
@@ -167,7 +258,7 @@ static int process_command(const char* command, Hero* hero)
     return 0;
 }
 
-void run_game()
+void run_game(void)
 {
     Hero hero;
     hero_init(&hero);

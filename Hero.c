@@ -1,30 +1,74 @@
+#include <stddef.h>
+
 #include "hero.h"
- 
+#include "map.h"
+
 void hero_init(Hero* hero)
 {
+    /* Разыменование ниже без проверки на NULL нельзя — защищаемся. */
+    if (hero == NULL)
+    {
+        return;
+    }
+
     hero->health = 100;
     hero->max_health = 100;
     hero->attack = 10;
- 
+
     hero->gold = 0;
     hero->floor = 1;
     hero->states = 0;
-    
+
     hero->x = 2;
     hero->y = 1;
 }
- 
-void hero_take_damage(Hero* hero, int damage)
+
+int shift_position(int* x, int* y, int dx, int dy)
 {
-    hero->health -= damage;
- 
-    if (hero->health < 0)
+    if (x == NULL || y == NULL)
     {
-        hero->health = 0;
+        return 0;
     }
- 
-    if (hero->health > hero->max_health)
+
+    int new_x = *x + dx;
+    int new_y = *y + dy;
+
+    if (!map_can_enter(new_x, new_y))
     {
-        hero->health = hero->max_health;
+        return 0;
     }
+
+    *x = new_x;
+    *y = new_y;
+
+    return 1;
+}
+
+int damage_health(int* health, int damage)
+{
+    if (health == NULL || damage < 0)
+    {
+        return 0;
+    }
+
+    *health -= damage;
+
+    if (*health < 0)
+    {
+        *health = 0;
+    }
+
+    return 1;
+}
+
+int add_gold(unsigned int* gold, unsigned int amount)
+{
+    if (gold == NULL)
+    {
+        return 0;
+    }
+    
+    *gold += amount;
+
+    return 1;
 }

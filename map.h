@@ -23,4 +23,21 @@ void map_print(int hero_x, int hero_y);
 
 int map_check_reachable(int start_x, int start_y);
 
+typedef enum
+{
+    CELL_FLOOR,
+    CELL_WALL,
+    CELL_GOLD,
+    CELL_EXIT
+} CellType;
+
+typedef const char (*MapGrid)[MAP_COLS + 1];
+
+MapGrid map_grid();
+
+int map_cell_info(const char grid[][MAP_COLS + 1], int x, int y,
+                  CellType* out_type, int* out_passable);
+
+void map_print_addresses(void);
+
 #endif
