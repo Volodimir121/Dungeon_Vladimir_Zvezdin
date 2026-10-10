@@ -1,24 +1,21 @@
 #include <stdio.h>
-
-#include "parser.h"
+#include "parcer.h"
 
 LineStatus read_line(char* buf, size_t size)
 {
-    /* Меньше 2 байт — не поместится даже один символ и '\0'. */
+
     if (buf == NULL || size < 2)
     {
         return LINE_ERROR;
     }
 
-    /* fgets читает не больше size - 1 символов и сама дописывает '\0'.
-       В отличие от gets/scanf("%s") переполнить буфер она не может. */
+
     if (fgets(buf, (int)size, stdin) == NULL)
     {
         buf[0] = '\0';
         return LINE_EOF;
     }
 
-    /* Длина вычисляется один раз проходом до '\n' или '\0'. */
     size_t len = 0;
 
     while (buf[len] != '\0' && buf[len] != '\n')
@@ -32,8 +29,6 @@ LineStatus read_line(char* buf, size_t size)
         return LINE_OK;
     }
 
-    /* '\n' в буфере нет. Если буфер заполнен целиком — строка длиннее и
-       хвост остался во входном потоке; вычитываем его до конца строки. */
     if (len == size - 1)
     {
         int c;
@@ -45,7 +40,6 @@ LineStatus read_line(char* buf, size_t size)
         return LINE_TOO_LONG;
     }
 
-    /* Иначе это последняя строка файла без '\n' на конце — она целая. */
     return LINE_OK;
 }
 
@@ -56,8 +50,6 @@ void to_lower_ascii(char* s)
         return;
     }
 
-    /* Код 'A' + 32 = 'a': заглавные и строчные буквы в ASCII отличаются
-       на 'a' - 'A'. Кириллицу и прочие символы не трогаем. */
     for (; *s != '\0'; s++)
     {
         if (*s >= 'A' && *s <= 'Z')
@@ -101,8 +93,6 @@ int split_words(char* line, char* words[], int max_words)
             p++;
         }
 
-        /* Конец слова: заменяем разделитель на '\0', чтобы слово
-           превратилось в самостоятельную C-строку. */
         if (*p != '\0')
         {
             *p = '\0';
@@ -110,8 +100,6 @@ int split_words(char* line, char* words[], int max_words)
         }
     }
 
-    /* Если после max_words слов осталось что-то кроме пробелов — слов
-       слишком много. Сообщаем об этом, а не молча отбрасываем хвост. */
     while (is_separator(*p))
     {
         p++;
@@ -139,7 +127,7 @@ ParseStatus parse_uint(const char* s, unsigned int max, unsigned int* out)
     {
         if (*p < '0' || *p > '9')
         {
-            /* Нецифра важнее переполнения: "99999999999x" — это не число. */
+
             return PARSE_BAD_CHAR;
         }
 
@@ -148,11 +136,9 @@ ParseStatus parse_uint(const char* s, unsigned int max, unsigned int* out)
             continue;
         }
 
-        /* Цифра превращается в число вычитанием кода нуля. */
         unsigned int digit = (unsigned int)(*p - '0');
 
-        /* Проверяем, что value * 10 + digit <= max, ДО умножения:
-           после переполнения unsigned результат уже не проверить. */
+
         if (value > max / 10 || (value == max / 10 && digit > max % 10))
         {
             too_big = 1;

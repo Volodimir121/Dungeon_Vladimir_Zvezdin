@@ -8,17 +8,16 @@
 #include "parser.h"
 #include "statushero.h"
 
-/* Команда получает героя и свой единственный необязательный аргумент
-   (NULL, если аргумента не было). Возвращает 1, чтобы завершить игру. */
+
 typedef int (*CommandFn)(Hero* hero, const char* arg);
 
 typedef struct
 {
-    const char* name;   /* полное имя: "north" */
-    const char* alias;  /* сокращение: "n" (пустая строка — нет) */
+    const char* name;   
+    const char* alias;
     const char* help;
-    int max_args;       /* сколько аргументов допускает команда */
-    int is_move;        /* можно ли писать "go <имя>" */
+    int max_args;
+    int is_move;
     CommandFn fn;
 } Command;
 
@@ -107,9 +106,6 @@ static int cmd_status(Hero* hero, const char* arg)
     return 0;
 }
 
-/* Превращает текстовый аргумент команды в число и сама объясняет игроку,
-   что не так. Возвращает 1, если *out заполнено, иначе 0 (сообщение уже
-   напечатано). what — как называется аргумент, для текста сообщений. */
 static int read_number_arg(const char* arg, const char* what,
     unsigned int max, unsigned int* out)
 {
@@ -159,8 +155,6 @@ static int cmd_hit(Hero* hero, const char* arg)
     return 0;
 }
 
-/* Инвентаря в игре пока нет, поэтому команда только проверяет номер
-   предмета и сообщает о нём. */
 static int cmd_use(Hero* hero, const char* arg)
 {
     unsigned int item;
@@ -289,9 +283,6 @@ static int cmd_help(Hero* hero, const char* arg)
     return 0;
 }
 
-/* Ищет команду по полному имени или по сокращению. Слова сравниваются
-   через strcmp (по содержимому), а не через == (это было бы сравнение
-   адресов). Возвращает NULL, если такой команды нет. */
 static const Command* find_command(const char* word)
 {
     for (size_t i = 0; i < COMMAND_COUNT; i++)
@@ -311,12 +302,10 @@ static const Command* find_command(const char* word)
     return NULL;
 }
 
-/* Выполняет уже разбитую на слова команду: argv[0] — первое слово,
-   argc >= 1. Возвращает 1, если игру нужно завершить. */
 static int process_command(Hero* hero, int argc, char* argv[])
 {
-    int first = 0;       /* индекс слова, которое называет команду */
-    int only_moves = 0;  /* после "go" допустимы только направления */
+    int first = 0;
+    int only_moves = 0;  
 
     if (strcmp(argv[0], "go") == 0)
     {
