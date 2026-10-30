@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.3)
+cmake_minimum_required(VERSION 3.10)
 project(Dungeon_Vladimir_Zvezdin C)
 
 set(CMAKE_C_STANDARD 99)
@@ -12,6 +12,10 @@ add_executable(
         game.h
         map.c
         map.h
+        entity.c
+        entity.h
+        errors.c
+        errors.h
         statushero.c
         statushero.h
         Hero.c

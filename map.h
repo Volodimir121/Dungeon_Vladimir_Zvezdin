@@ -1,27 +1,21 @@
 #ifndef MAP_H
 #define MAP_H
 
-#define MAP_ROWS 7
-#define MAP_COLS 20
+#include <stddef.h>
+#include "errors.h"
+#include "entity.h"
 
-#define MAP_WALL  '#'
-#define MAP_FLOOR ' '
-#define MAP_GOLD  '$'
-#define MAP_EXIT  'E'
+#define MAP_WALL    '#'
+#define MAP_FLOOR   ' '
+#define MAP_GOLD    '$'
+#define MAP_EXIT    'E'
+#define MAP_HERO    '@'
+#define MAP_MONSTER 'M'
 
-int map_in_bounds(int x, int y);
-
-int map_is_wall(int x, int y);
-
-int map_can_enter(int x, int y);
-
-char map_get(int x, int y);
-
-void map_clear(int x, int y);
-
-void map_print(int hero_x, int hero_y);
-
-int map_check_reachable(int start_x, int start_y);
+/* Default generation proportions */
+#define MAP_WALL_PERCENT    30
+#define MAP_GOLD_PERCENT    3
+#define MAP_FLOOR_PERCENT   (100 - MAP_WALL_PERCENT - MAP_GOLD_PERCENT)
 
 typedef enum
 {
@@ -31,13 +25,50 @@ typedef enum
     CELL_EXIT
 } CellType;
 
-typedef const char (*MapGrid)[MAP_COLS + 1];
+typedef struct Map
+{
+    int rows;
+    int cols;
+    char* data; /* 1D contiguous block: row * cols + col */
+} Map;
 
-MapGrid map_grid();
+/* Initialization and memory management */
+ErrorCode map_init(Map* map, int rows, int cols);
+void map_free(Map* map);
 
-int map_cell_info(const char grid[][MAP_COLS + 1], int x, int y,
-                  CellType* out_type, int* out_passable);
+/* Coordinate and boundary checks */
+int map_in_bounds(const Map* map, int x, int y);
+int map_is_wall(const Map* map, int x, int y);
+int map_can_enter(const Map* map, int x, int y);
 
-void map_print_addresses(void);
+/* Cell access by row and col (Practice 7 Requirement 2) */
+char map_get_cell(const Map* map, int row, int col);
+void map_set_cell(Map* map, int row, int col, char ch);
 
-#endif
+/* Cell access by x (col) and y (row) */
+char map_get(const Map* map, int x, int y);
+void map_set(Map* map, int x, int y, char ch);
+void map_clear(Map* map, int x, int y);
+
+int map_cell_info(const Map* map, int x, int y, CellType* out_type, int* out_passable);
+
+/* Reachability check using dynamically allocated memory */
+int map_check_reachable(const Map* map, int start_x, int start_y);
+
+/* Loading level from file (Practice 8 Requirement 3 & 4) */
+ErrorCode map_load_from_file(const char* filename, Map* out_map,
+                           int* out_hero_x, int* out_hero_y,
+                           MonsterList* out_monsters);
+
+/* Procedural generation: 30% wall, 60% floor, 10% gold (Practice 7) */
+ErrorCode map_generate(Map* map, int rows, int cols,
+                       int* out_hero_x, int* out_hero_y,
+                       MonsterList* out_monsters);
+
+/* Rendering */
+void map_print(const Map* map, const Hero* hero, const MonsterList* monsters);
+
+/* Memory debug output */
+void map_print_addresses(const Map* map);
+
+#endif /* MAP_H */
