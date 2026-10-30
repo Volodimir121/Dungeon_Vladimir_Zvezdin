@@ -2,6 +2,7 @@
 
 const char* error_code_to_string(ErrorCode code)
 {
+
     switch (code)
     {
     case ERR_OK:
@@ -17,4 +18,5 @@ const char* error_code_to_string(ErrorCode code)
     default:
         return "Error: Unknown error.";
     }
+
 }
