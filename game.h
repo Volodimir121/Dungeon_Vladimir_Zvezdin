@@ -34,6 +34,9 @@ public:
     /* Главный цикл: чтение команды, вызов методов объектов, вывод */
     void run();
 
+    /* Демонстрация стека, кучи и блока области видимости (Практика 10, задания 3–4) */
+    static void runLifetimeDemo();
+
 private:
     void processCommand(const std::string& line);
     void moveHero(int dx, int dy, const std::string& dirName);

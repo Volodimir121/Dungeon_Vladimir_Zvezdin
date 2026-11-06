@@ -98,8 +98,40 @@ void Game::printHelp() const
               << "  look      (l)  - redraw the dungeon map\n"
               << "  status    (st) - show hero status\n"
               << "  hit <N>        - take N damage (test Hero::takeDamage)\n"
+              << "  test           - demonstrate stack, heap, and scope block (Practice 10)\n"
               << "  help      (h)  - show this help\n"
               << "  quit      (q)  - exit the game\n";
+}
+
+/*
+ * Практика 10, задания 3 и 4:
+ * Создание объектов на стеке, внутри вложенного блока { ... } и в куче (new / delete).
+ *
+ * ПОРЯДОК ВЫЗОВОВ КОНСТРУКТОРОВ И ДЕСТРУКТОРОВ (Практика 10, критерий 2):
+ * 1. Стековые объекты (stackMap, stackHero) уничтожаются автоматически при выходе
+ *    из функции в порядке, обратном порядку их создания (сначала ~Hero, затем ~Map).
+ * 2. Объект внутри вложенного блока { Map blockMap(3, 5); } уничтожается автоматически
+ *    сразу при выходе из этого блока '}', до завершения функции.
+ * 3. Объект в куче (new Map(5, 6)) не уничтожается автоматически — он удаляется
+ *    явно оператором delete.
+ */
+void Game::runLifetimeDemo()
+{
+    std::cout << "--- 1. Stack objects ---\n";
+    Map  stackMap(4, 8);
+    Hero stackHero(2, 2, 85, 10);
+
+    std::cout << "\n--- 2. Object inside nested block { ... } ---\n";
+    {
+        Map blockMap(3, 5);
+    }
+
+    std::cout << "\n--- 3. Object on the heap (new / delete) ---\n";
+    Map* heapMap = new Map(5, 6);
+    delete heapMap;
+    heapMap = nullptr;
+
+    std::cout << "\n--- 4. Leaving function (stack objects destroyed in reverse order) ---\n";
 }
 
 void Game::processCommand(const std::string& rawLine)
@@ -198,6 +230,10 @@ void Game::processCommand(const std::string& rawLine)
         {
             std::cout << "Invalid damage number: '" << words[1] << "'.\n";
         }
+    }
+    else if (cmd == "test" || cmd == "raii")
+    {
+        Game::runLifetimeDemo();
     }
     else if (cmd == "help" || cmd == "h")
     {
