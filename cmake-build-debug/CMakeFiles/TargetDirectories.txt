@@ -1,0 +1,3 @@
+D:/TP_practics/Dungeon_Vladimir_Zvezdin/cmake-build-debug/CMakeFiles/Dungeon_Vladimir_Zvezdin.dir
+D:/TP_practics/Dungeon_Vladimir_Zvezdin/cmake-build-debug/CMakeFiles/edit_cache.dir
+D:/TP_practics/Dungeon_Vladimir_Zvezdin/cmake-build-debug/CMakeFiles/rebuild_cache.dir
