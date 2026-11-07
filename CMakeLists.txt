@@ -1,25 +1,22 @@
 cmake_minimum_required(VERSION 3.10)
-project(Dungeon_Vladimir_Zvezdin C)
+project(Dungeon_Vladimir_Zvezdin CXX)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 include_directories(.)
 
 add_executable(
         ${PROJECT_NAME}
-        main.c
-        game.c
-        game.h
-        map.c
-        map.h
-        entity.c
-        entity.h
-        errors.c
-        errors.h
-        statushero.c
-        statushero.h
-        Hero.c
+        main.cpp
+        Map.h
+        Map.cpp
         Hero.h
-        parcer.c
-        parcer.h
+        Hero.cpp
+        Game.h
+        Game.cpp
 )
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/level.txt
+               ${CMAKE_CURRENT_BINARY_DIR}/level.txt COPYONLY)

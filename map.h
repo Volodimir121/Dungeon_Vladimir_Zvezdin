@@ -1,74 +1,101 @@
-#ifndef MAP_H
-#define MAP_H
+#pragma once
+#include <string>
+#include <vector>
 
-#include <stddef.h>
-#include "errors.h"
-#include "entity.h"
+class Hero;
 
-#define MAP_WALL    '#'
-#define MAP_FLOOR   ' '
-#define MAP_GOLD    '$'
-#define MAP_EXIT    'E'
-#define MAP_HERO    '@'
-#define MAP_MONSTER 'M'
-
-/* Default generation proportions */
-#define MAP_WALL_PERCENT    30
-#define MAP_GOLD_PERCENT    3
-#define MAP_FLOOR_PERCENT   (100 - MAP_WALL_PERCENT - MAP_GOLD_PERCENT)
-
-typedef enum
+/*
+ * Класс Map — карта подземелья.
+ *
+ * Практика 9, задание 2:
+ *   Поля: размеры (rows, cols) и содержимое (data).
+ *   Методы: получить символ клетки (getCell), задать символ клетки (setCell),
+ *           проверить проходимость (canEnter), вывести на экран (print).
+ *   Все функции работы с картой объединены внутри класса; свободных функций
+ *   работы с картой не осталось.
+ *
+ * Практика 9, подсказка:
+ *   «Пока можно оставить все члены открытыми. Закрывать их будете на практике 11,
+ *   и там станет понятно зачем.»
+ *
+ * Практика 10, задания 1–2, 6:
+ *   Конструктор выделяет динамическую память под клетки, деструктор освобождает её (RAII).
+ *   Копирование запрещено (= delete), чтобы избежать двойного освобождения (double free).
+ */
+class Map
 {
-    CELL_FLOOR,
-    CELL_WALL,
-    CELL_GOLD,
-    CELL_EXIT
-} CellType;
+public:
+    static const char WALL    = '#';
+    static const char FLOOR   = ' ';
+    static const char GOLD    = '$';
+    static const char EXIT    = 'E';
+    static const char HERO    = '@';
+    static const char MONSTER = 'M';
 
-typedef struct Map
-{
-    int rows;
-    int cols;
-    char* data; /* 1D contiguous block: row * cols + col */
-} Map;
+    /* Поля карты (оставлены открытыми до Практики 11 согласно подсказке Практики 9) */
+    int   rows;
+    int   cols;
+    char* data; /* Одномерный непрерывный массив клеток: data[y * cols + x] */
+    int   startHeroX;
+    int   startHeroY;
 
-/* Initialization and memory management */
-ErrorCode map_init(Map* map, int rows, int cols);
-void map_free(Map* map);
+    /*
+     * Практика 10, задание 1:
+     * Конструктор принимает размеры карты и выделяет память под клетки в куче.
+     */
+    Map(int rows, int cols);
 
-/* Coordinate and boundary checks */
-int map_in_bounds(const Map* map, int x, int y);
-int map_is_wall(const Map* map, int x, int y);
-int map_can_enter(const Map* map, int x, int y);
+    /*
+     * Практика 10, задание 6:
+     * Конструктор загрузки уровня из файла.
+     * Использует делегирующий конструктор: если после выделения памяти при разборе
+     * содержимого файла обнаружится ошибка формата, делегированный конструктор уже
+     * завершился, поэтому C++ автоматически вызовет деструктор ~Map() и освободит
+     * память, а сам объект Map создан не будет.
+     */
+    explicit Map(const std::string& filename, int* outHeroX = nullptr, int* outHeroY = nullptr);
 
-/* Cell access by row and col (Practice 7 Requirement 2) */
-char map_get_cell(const Map* map, int row, int col);
-void map_set_cell(Map* map, int row, int col, char ch);
+    /*
+     * Практика 10, задание 2:
+     * Деструктор автоматически освобождает память, выделенную в конструкторе.
+     */
+    ~Map();
 
-/* Cell access by x (col) and y (row) */
-char map_get(const Map* map, int x, int y);
-void map_set(Map* map, int x, int y, char ch);
-void map_clear(Map* map, int x, int y);
+    /*
+     * Практика 10, подсказка:
+     * Запрещаем копирование, так как класс владеет сырым указателем data.
+     * Поверхностная копия скопировала бы только указатель, и два деструктора
+     * попытались бы освободить один и тот же блок памяти.
+     */
+    Map(const Map&)            = delete;
+    Map& operator=(const Map&) = delete;
 
-int map_cell_info(const Map* map, int x, int y, CellType* out_type, int* out_passable);
+    /* --- Методы работы с картой (Практика 9, задание 2) --- */
 
-/* Reachability check using dynamically allocated memory */
-int map_check_reachable(const Map* map, int start_x, int start_y);
+    /* Получить символ клетки по координатам (x — столбец, y — строка) */
+    char getCell(int x, int y) const;
 
-/* Loading level from file (Practice 8 Requirement 3 & 4) */
-ErrorCode map_load_from_file(const char* filename, Map* out_map,
-                           int* out_hero_x, int* out_hero_y,
-                           MonsterList* out_monsters);
+    /* Задать символ клетки по координатам (x — столбец, y — строка) */
+    void setCell(int x, int y, char ch);
 
-/* Procedural generation: 30% wall, 60% floor, 10% gold (Practice 7) */
-ErrorCode map_generate(Map* map, int rows, int cols,
-                       int* out_hero_x, int* out_hero_y,
-                       MonsterList* out_monsters);
+    /* Проверить, находится ли клетка в пределах карты */
+    bool inBounds(int x, int y) const;
 
-/* Rendering */
-void map_print(const Map* map, const Hero* hero, const MonsterList* monsters);
+    /* Проверить проходимость клетки (внутри границ и не стена) */
+    bool canEnter(int x, int y) const;
 
-/* Memory debug output */
-void map_print_addresses(const Map* map);
+    /* Вывести карту на экран вместе с положением героя */
+    void print(const Hero& hero) const;
 
-#endif /* MAP_H */
+    /* Заполнить карту процедурной генерацией (стены, пол, золото, выход) */
+    void generateProcedural(int* outHeroX = nullptr, int* outHeroY = nullptr);
+
+private:
+    /* Вычисление индекса в одномерном массиве */
+    int index(int x, int y) const;
+
+    /* Вспомогательный делегирующий конструктор для безопасной загрузки из файла (RAII) */
+    Map(const std::vector<std::string>& lines, int* outHeroX, int* outHeroY);
+
+    static std::vector<std::string> readLinesFromFile(const std::string& filename);
+};

@@ -1,9 +1,76 @@
-#ifndef DUNGEON_VLADIMIR_ZVEZDIN_HERO_H
-#define DUNGEON_VLADIMIR_ZVEZDIN_HERO_H
+#pragma once
 
-#include "entity.h"
+class Map;
 
-int damage_health(int* health, int damage);
-int add_gold(unsigned int* gold, unsigned int amount);
+/*
+ * Класс Hero — герой подземелья.
+ *
+ * Практика 9, задание 3:
+ *   Поля: координаты (x, y), здоровье (health, maxHealth), золото (gold).
+ *   Методы: переместиться в направлении (move), получить урон (takeDamage),
+ *           вывести состояние (printStatus).
+ *
+ * Практика 9, задание 5:
+ *   Метод drawOn(const Map& map) передаёт сам объект героя (*this) методу
+ *   карты map.print(*this), явно демонстрируя работу указателя this.
+ *
+ * Практика 10, задание 5:
+ *   Конструктор с параметрами и конструктор по умолчанию, а также деструктор
+ *   с логированием времени жизни объекта.
+ */
+class Hero
+{
+public:
+    /* Поля героя (оставлены открытыми до Практики 11 согласно подсказке Практики 9) */
+    int          x;
+    int          y;
+    int          health;
+    int          maxHealth;
+    unsigned int gold;
 
-#endif /* DUNGEON_VLADIMIR_ZVEZDIN_HERO_H */
+    /*
+     * Практика 10, задание 5:
+     * Конструктор по умолчанию — создаёт героя в точке (1, 1) с полным здоровьем.
+     */
+    Hero();
+
+    /*
+     * Практика 10, задание 5:
+     * Конструктор с параметрами — задаёт начальные координаты, здоровье и золото.
+     */
+    Hero(int startX, int startY, int startHealth = 100, unsigned int startGold = 0);
+
+    /*
+     * Практика 10, задание 3:
+     * Деструктор выводит сообщение для отслеживания порядка уничтожения объектов.
+     */
+    ~Hero();
+
+    /* --- Методы поведения героя (Практика 9, задание 3) --- */
+
+    /*
+     * Переместиться в направлении (dx, dy), если клетка проходима.
+     * Герой не хранит карту внутри себя и не управляет ею, а лишь
+     * задаёт карте вопрос о проходимости целевой клетки: map.canEnter(nx, ny).
+     */
+    bool move(int dx, int dy, const Map& map);
+
+    /* Получить урон (здоровье уменьшается, но не опускается ниже 0) */
+    void takeDamage(int damage);
+
+    /* Добавить золото */
+    void addGold(unsigned int amount = 1);
+
+    /* Вывести текущее состояние героя на экран */
+    void printStatus() const;
+
+    /*
+     * Практика 9, задание 5:
+     * Отрисовать карту с текущим героем, явно передавая сам объект (*this)
+     * в метод Map::print(const Hero&).
+     */
+    void drawOn(const Map& map) const;
+
+    /* Проверка, жив ли герой */
+    bool isAlive() const;
+};

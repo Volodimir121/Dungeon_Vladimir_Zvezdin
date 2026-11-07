@@ -1,29 +1,45 @@
-#ifndef GAME_H
-#define GAME_H
+#pragma once
+#include "Map.h"
+#include "Hero.h"
+#include <string>
 
-#include "errors.h"
-#include "map.h"
-#include "entity.h"
-
-typedef struct Game
+/*
+ * Управление главным игровым циклом (Практика 9, задание 4).
+ *
+ * Объединяет объекты двух основных классов проекта — Map и Hero.
+ * Порядок объявления полей: сначала map, затем hero.
+ * По правилам C++ поля конструируются в порядке их объявления в классе
+ * (сначала Map, затем Hero), а разрушаются деструкторами в строго обратном
+ * порядке (сначала ~Hero(), затем ~Map()).
+ */
+class Game
 {
-    Map map;
+public:
+    Map  map;
     Hero hero;
-    MonsterList monsters;
-    int turn;
-    int is_running;
-} Game;
+    int  turn;
+    bool isRunning;
 
-/* Lifecycle */
-void game_init_empty(Game* game);
-ErrorCode game_init_procedural(Game* game, int rows, int cols);
-ErrorCode game_init_from_file(Game* game, const char* filename);
-void game_free(Game* game);
+    /* Конструктор с процедурной генерацией карты заданного размера */
+    Game(int rows, int cols);
 
-/* Game loop */
-void game_run(Game* game);
+    /* Конструктор с загрузкой карты из файла (Практика 10, задание 6) */
+    explicit Game(const std::string& filename);
 
-/* Entry point */
-void run_game(void);
+    ~Game();
 
-#endif /* GAME_H */
+    Game(const Game&)            = delete;
+    Game& operator=(const Game&) = delete;
+
+    /* Главный цикл: чтение команды, вызов методов объектов, вывод */
+    void run();
+
+    /* Демонстрация стека, кучи и блока области видимости (Практика 10, задания 3–4) */
+    static void runLifetimeDemo();
+
+private:
+    void processCommand(const std::string& line);
+    void moveHero(int dx, int dy, const std::string& dirName);
+    void checkCurrentCell();
+    void printHelp() const;
+};
