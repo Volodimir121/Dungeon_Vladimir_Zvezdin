@@ -1,20 +1,18 @@
 #include "Map.h"
-#include "Hero.h"
 
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <fstream>
-#include <iostream>
 #include <stdexcept>
 
 /* -------------------------------------------------------------------------- */
-/*  Практика 10, задания 1–3: конструктор по размерам и деструктор (RAII)     */
+/*  Конструкторы и деструктор (практика 10, RAII)                             */
 /* -------------------------------------------------------------------------- */
 
 Map::Map(int rows, int cols)
     : rows(rows), cols(cols), data(nullptr), startHeroX(1), startHeroY(1)
 {
+    /* Инвариант п.1 проверяется в конструкторе до выделения памяти */
     if (this->rows < 3 || this->cols < 3)
     {
         throw std::invalid_argument("Размер карты должен быть не менее 3x3.");
@@ -22,14 +20,10 @@ Map::Map(int rows, int cols)
 
     std::size_t totalCells = static_cast<std::size_t>(this->rows) * static_cast<std::size_t>(this->cols);
 
-    /*
-     * Практика 10, задания 1 и 3:
-     * Выделяем динамическую память под клетки в конструкторе и выводим сообщение.
-     */
     this->data = new char[totalCells];
     std::memset(this->data, FLOOR, totalCells);
 
-    /* Заполняем внешний периметр стенами по умолчанию */
+    /* Внешний периметр — стены по умолчанию. Клетка (1, 1) внутри, так что инвариант п.4 выполнен. */
     for (int r = 0; r < this->rows; ++r)
     {
         for (int c = 0; c < this->cols; ++c)
@@ -40,14 +34,27 @@ Map::Map(int rows, int cols)
             }
         }
     }
+}
 
-    std::cout << "[Map] Конструктор: создана карта " << this->rows << "x" << this->cols
-              << " (выделено " << totalCells << " байт по адресу "
-              << static_cast<const void*>(this->data) << ")\n";
+Map::Map(int rows, int cols, Procedural)
+    : Map(rows, cols)
+{
+    this->generateProcedural();
+}
+
+Map::~Map()
+{
+    /*
+     * Единственное место, где освобождается массив клеток.
+     * Практика 11: никакого вывода на экран, поэтому момент уничтожения
+     * карты в демонстрациях показывают вспомогательные объекты-«трассировщики».
+     */
+    delete[] this->data;
+    this->data = nullptr;
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Практика 10, задание 6: безопасная загрузка из файла (RAII)               */
+/*  Загрузка из файла                                                         */
 /* -------------------------------------------------------------------------- */
 
 std::vector<std::string> Map::readLinesFromFile(const std::string& filename)
@@ -66,7 +73,7 @@ std::vector<std::string> Map::readLinesFromFile(const std::string& filename)
         {
             line.pop_back();
         }
-        /* Пропускаем пустые строки в конце файла */
+        /* Пропускаем пустые строки */
         if (!line.empty())
         {
             lines.push_back(line);
@@ -95,21 +102,59 @@ std::vector<std::string> Map::readLinesFromFile(const std::string& filename)
     return lines;
 }
 
-Map::Map(const std::vector<std::string>& lines, int* outHeroX, int* outHeroY)
+Map::Map(const std::vector<std::string>& lines)
     : Map(static_cast<int>(lines.size()), static_cast<int>(lines[0].size()))
 {
     /*
-     * Практика 10, задание 6:
-     * К этому моменту целевой (делегированный) конструктор Map(rows, cols)
-     * УЖЕ завершился и выделил память this->data.
-     * По стандарту C++17, если в теле делегирующего конструктора возникнет
-     * исключение (например, встретится недопустимый символ в файле),
-     * компилятор АВТОМАТИЧЕСКИ вызовет деструктор ~Map(), который освободит
-     * this->data, а сам объект Map создан не будет!
-     * Таким образом, ни одного ручного delete[] вне ~Map() не требуется.
+     * Делегированный конструктор Map(rows, cols) уже завершился и выделил память.
+     * Если ниже будет брошено исключение, C++ сам вызовет ~Map() и освободит data.
      */
-    bool heroFound = false;
 
+    /* Проход 1: проверяем символы, ищем героя и запасную свободную клетку */
+    int heroX = -1;
+    int heroY = -1;
+    int freeX = -1;
+    int freeY = -1;
+
+    for (int r = 0; r < this->rows; ++r)
+    {
+        for (int c = 0; c < this->cols; ++c)
+        {
+            char ch = lines[r][c];
+            if (!Map::isTileSymbol(ch) && ch != HERO && ch != MONSTER)
+            {
+                throw std::runtime_error(
+                    std::string("Недопустимый символ '") + ch + "' в файле уровня.");
+            }
+            if (ch == HERO && heroX < 0)
+            {
+                heroX = c;
+                heroY = r;
+            }
+            if (ch == FLOOR && freeX < 0 &&
+                r >= 1 && r < this->rows - 1 && c >= 1 && c < this->cols - 1)
+            {
+                freeX = c;
+                freeY = r;
+            }
+        }
+    }
+
+    if (heroX < 0)
+    {
+        heroX = freeX;
+        heroY = freeY;
+    }
+    if (heroX < 0)
+    {
+        throw std::runtime_error("В файле уровня нет свободной клетки для героя.");
+    }
+
+    /* Стартовая клетка задаётся ДО раскладки клеток, чтобы setCell её не блокировал */
+    this->startHeroX = heroX;
+    this->startHeroY = heroY;
+
+    /* Проход 2: заполняем карту */
     for (int r = 0; r < this->rows; ++r)
     {
         for (int c = 0; c < this->cols; ++c)
@@ -117,84 +162,52 @@ Map::Map(const std::vector<std::string>& lines, int* outHeroX, int* outHeroY)
             char ch = lines[r][c];
             if (ch == HERO)
             {
-                this->startHeroX = c;
-                this->startHeroY = r;
-                if (outHeroX != nullptr) *outHeroX = c;
-                if (outHeroY != nullptr) *outHeroY = r;
-                heroFound = true;
                 this->setCell(c, r, FLOOR);
             }
             else if (ch == MONSTER)
             {
-                /* Монстры переносятся на следующих практиках — оставляем клетку полом */
                 this->setCell(c, r, FLOOR);
-            }
-            else if (ch == WALL || ch == FLOOR || ch == GOLD || ch == EXIT)
-            {
-                this->setCell(c, r, ch);
+                this->monsterSpawns.emplace_back(c, r);
             }
             else
             {
-                throw std::runtime_error(
-                    std::string("Недопустимый символ '") + ch + "' в файле уровня.");
-            }
-        }
-    }
-
-    if (!heroFound)
-    {
-        for (int r = 1; r < this->rows - 1 && !heroFound; ++r)
-        {
-            for (int c = 1; c < this->cols - 1 && !heroFound; ++c)
-            {
-                if (this->getCell(c, r) == FLOOR)
-                {
-                    this->startHeroX = c;
-                    this->startHeroY = r;
-                    if (outHeroX != nullptr) *outHeroX = c;
-                    if (outHeroY != nullptr) *outHeroY = r;
-                    heroFound = true;
-                }
+                this->setCell(c, r, ch);
             }
         }
     }
 }
 
-Map::Map(const std::string& filename, int* outHeroX, int* outHeroY)
-    : Map(readLinesFromFile(filename), outHeroX, outHeroY)
+Map::Map(const std::string& filename)
+    : Map(readLinesFromFile(filename))
 {
-    std::cout << "[Map] Уровень успешно загружен из файла '" << filename << "'.\n";
-}
-
-Map::~Map()
-{
-    /*
-     * Практика 10, задания 2 и 3:
-     * Единственное место во всей программе, где освобождается массив клеток.
-     * Вызывается автоматически при выходе стекового объекта из области видимости
-     * или при вызове delete для объекта в куче.
-     */
-    std::cout << "[Map] Деструктор: освобождается память карты "
-              << this->rows << "x" << this->cols
-              << " (адрес буфера " << static_cast<const void*>(this->data) << ")\n";
-
-    delete[] this->data;
-    this->data = nullptr;
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Практика 9, задания 2 и 5: методы работы с картой                         */
+/*  Геттеры и методы работы с картой                                          */
 /* -------------------------------------------------------------------------- */
+
+int Map::getRows() const       { return this->rows; }
+int Map::getCols() const       { return this->cols; }
+int Map::getStartHeroX() const { return this->startHeroX; }
+int Map::getStartHeroY() const { return this->startHeroY; }
+
+std::vector<std::pair<int, int>> Map::getMonsterSpawns() const
+{
+    return this->monsterSpawns;
+}
 
 int Map::index(int x, int y) const
 {
     /*
-     * Практика 9, задание 5:
      * При вызове map.getCell(x, y) -> this->index(x, y) компилятор неявно передаёт
-     * указатель `const Map* const this` на тот объект Map, у которого вызван метод.
-     * Запись `this->cols` явно обращается к полю cols текущего объекта.
+     * указатель `const Map* const this` на объект, у которого вызван метод.
      */
     return y * this->cols + x;
+}
+
+bool Map::isTileSymbol(char ch)
+{
+    return ch == WALL || ch == FLOOR || ch == GOLD || ch == EXIT;
 }
 
 bool Map::inBounds(int x, int y) const
@@ -213,13 +226,24 @@ char Map::getCell(int x, int y) const
     return this->data[this->index(x, y)];
 }
 
-void Map::setCell(int x, int y, char ch)
+bool Map::setCell(int x, int y, char ch)
 {
+    /* Каждая проверка защищает пункт инварианта: п.2, п.3, п.4 */
     if (!this->inBounds(x, y))
     {
-        return;
+        return false;
     }
+    if (!Map::isTileSymbol(ch))
+    {
+        return false;
+    }
+    if (ch == WALL && x == this->startHeroX && y == this->startHeroY)
+    {
+        return false;
+    }
+
     this->data[this->index(x, y)] = ch;
+    return true;
 }
 
 bool Map::canEnter(int x, int y) const
@@ -231,38 +255,13 @@ bool Map::canEnter(int x, int y) const
     return this->getCell(x, y) != WALL;
 }
 
-void Map::print(const Hero& hero) const
-{
-    if (this->data == nullptr)
-    {
-        return;
-    }
+/* -------------------------------------------------------------------------- */
+/*  Процедурная генерация (датчик случайных чисел заполняется в main)         */
+/* -------------------------------------------------------------------------- */
 
-    for (int r = 0; r < this->rows; ++r)
-    {
-        for (int c = 0; c < this->cols; ++c)
-        {
-            if (c == hero.x && r == hero.y)
-            {
-                std::cout << HERO;
-            }
-            else
-            {
-                std::cout << this->getCell(c, r);
-            }
-        }
-        std::cout << '\n';
-    }
-}
-
-void Map::generateProcedural(int* outHeroX, int* outHeroY)
+void Map::generateProcedural()
 {
-    static bool seeded = false;
-    if (!seeded)
-    {
-        std::srand(static_cast<unsigned int>(std::time(nullptr)));
-        seeded = true;
-    }
+    this->monsterSpawns.clear();
 
     /* 1. Очищаем внутреннюю область и строим стены по границе */
     int borderWalls = 0;
@@ -297,7 +296,7 @@ void Map::generateProcedural(int* outHeroX, int* outHeroY)
         innerWalls = innerCells / 3;
     }
 
-    /* 2. Расставляем внутренние стены */
+    /* 2. Внутренние стены (setCell сама не даст поставить стену на стартовую клетку) */
     int wallsPlaced = 0;
     int attempts = 0;
     while (wallsPlaced < innerWalls && attempts < innerCells * 4)
@@ -305,14 +304,13 @@ void Map::generateProcedural(int* outHeroX, int* outHeroY)
         ++attempts;
         int r = 1 + std::rand() % (this->rows - 2);
         int c = 1 + std::rand() % (this->cols - 2);
-        if (this->getCell(c, r) == FLOOR)
+        if (this->getCell(c, r) == FLOOR && this->setCell(c, r, WALL))
         {
-            this->setCell(c, r, WALL);
             ++wallsPlaced;
         }
     }
 
-    /* 3. Расставляем золото */
+    /* 3. Золото */
     int goldPlaced = 0;
     attempts = 0;
     while (goldPlaced < targetGold && attempts < innerCells * 4)
@@ -327,20 +325,16 @@ void Map::generateProcedural(int* outHeroX, int* outHeroY)
         }
     }
 
-    /* 4. Выбираем стартовую клетку героя */
-    int hx = 1;
-    int hy = 1;
-    this->setCell(hx, hy, FLOOR);
-    this->startHeroX = hx;
-    this->startHeroY = hy;
-    if (outHeroX != nullptr) *outHeroX = hx;
-    if (outHeroY != nullptr) *outHeroY = hy;
+    /* 4. Стартовая клетка героя */
+    this->startHeroX = 1;
+    this->startHeroY = 1;
+    this->setCell(this->startHeroX, this->startHeroY, FLOOR);
 
-    /* 5. Размещаем выход в правом нижнем углу и гарантируем проходимый маршрут */
+    /* 5. Выход в правом нижнем углу и гарантированно проходимый маршрут */
     int ex = this->cols - 2;
     int ey = this->rows - 2;
-    int curX = hx;
-    int curY = hy;
+    int curX = this->startHeroX;
+    int curY = this->startHeroY;
     while (curX != ex)
     {
         curX += (ex > curX) ? 1 : -1;
