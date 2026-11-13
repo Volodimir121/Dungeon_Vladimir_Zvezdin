@@ -1,5 +1,7 @@
 #include "Game.h"
 
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -35,6 +37,9 @@ int main(int argc, char* argv[])
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 #endif
+
+    /* Датчик случайных чисел заполняется один раз: им пользуются генерация карты и монстры */
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     /* Если передан путь к файлу в аргументах командной строки */
     if (argc > 1)
@@ -111,6 +116,7 @@ int main(int argc, char* argv[])
                  * Если в файле ошибка, конструктор Map выбросит исключение,
                  * деструктор ~Map() автоматически освободит буфер (если он уже был выделен),
                  * объект Game создан не будет, и управление перейдёт в блок catch.
+                 * Монстры расставляются по символам 'M' из файла уровня.
                  */
                 Game game(filename);
                 game.run();

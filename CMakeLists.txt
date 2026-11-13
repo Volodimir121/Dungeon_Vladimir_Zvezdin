@@ -12,8 +12,14 @@ add_executable(
         main.cpp
         Map.h
         Map.cpp
+        MapRenderer.h
+        MapRenderer.cpp
+        Creature.h
+        Creature.cpp
         Hero.h
         Hero.cpp
+        Monster.h
+        Monster.cpp
         Game.h
         Game.cpp
 )
