@@ -1,6 +1,9 @@
 # ninja log v7
-8	228	8156886168151778	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/Hero.cpp.obj	b906b21332b546e3
-7	292	8156890652212479	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/Game.cpp.obj	4b74a7a6896a5faa
-5	265	8156886168133950	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/Map.cpp.obj	de49cd6eef4c55e0
-4	683	8156890652181214	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/main.cpp.obj	a3ee72cc18ac51c0
-683	763	8156890658971990	Dungeon_Vladimir_Zvezdin.exe	c36c87171420e40
+15	333	8163013558799820	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/Hero.cpp.obj	4ceea115f96574f
+21	610	8163013558856304	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/Game.cpp.obj	bde1c4deb1a56dcc
+7	422	8163013558718695	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/Map.cpp.obj	2b09bd8a4d0898df
+4	836	8163013558684761	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/main.cpp.obj	8b018d67c32d0cb4
+836	935	8163013567001708	Dungeon_Vladimir_Zvezdin.exe	473b2c8d13cb9f8b
+13	213	8163013558769460	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/Creature.cpp.obj	bf65aa88b9e903ec
+19	292	8163013558830299	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/Monster.cpp.obj	b6b3916137d94b2c
+10	322	8163013558749049	CMakeFiles/Dungeon_Vladimir_Zvezdin.dir/MapRenderer.cpp.obj	ec4ad9fe0da2b491

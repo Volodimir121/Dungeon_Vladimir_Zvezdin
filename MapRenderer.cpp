@@ -2,7 +2,9 @@
 #include "Creature.h"
 #include "Map.h"
 
+#include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <string>
 
 void MapRenderer::draw(const Map& map, const std::vector<const Creature*>& creatures) const
@@ -19,17 +21,32 @@ void MapRenderer::draw(const Map& map, const std::vector<const Creature*>& creat
         }
     }
 
-    for (const Creature* creature : creatures)
+    std::vector<const Creature*> visible;
+    std::copy_if(creatures.begin(), creatures.end(), std::back_inserter(visible),
+                 [&map](const Creature* creature)
+                 {
+                     return creature != nullptr && creature->isAlive() &&
+                            map.inBounds(creature->getX(), creature->getY());
+                 });
+
+    struct Glyph
     {
-        if (creature == nullptr || !creature->isAlive())
-        {
-            continue;
-        }
-        if (map.inBounds(creature->getX(), creature->getY()))
-        {
-            canvas[static_cast<std::size_t>(creature->getY())]
-                  [static_cast<std::size_t>(creature->getX())] = creature->getSymbol();
-        }
+        std::size_t x;
+        std::size_t y;
+        char symbol;
+    };
+    std::vector<Glyph> glyphs;
+    glyphs.reserve(visible.size());
+    std::transform(visible.begin(), visible.end(), std::back_inserter(glyphs),
+                   [](const Creature* creature)
+                   {
+                       return Glyph{static_cast<std::size_t>(creature->getX()),
+                                    static_cast<std::size_t>(creature->getY()),
+                                    creature->getSymbol()};
+                   });
+    for (const Glyph& glyph : glyphs)
+    {
+        canvas[glyph.y][glyph.x] = glyph.symbol;
     }
 
     for (const std::string& row : canvas)

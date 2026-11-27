@@ -21,6 +21,7 @@ public:
 
     virtual const Map& getMap() const = 0;
     virtual Creature&  getPlayer() = 0;
+    virtual const Creature& getPlayer() const = 0;
     virtual bool       isCellOccupied(int x, int y) const = 0;
     virtual void       report(const std::string& message) = 0;
 };
@@ -58,6 +59,7 @@ public:
     int  getMaxHealth() const;
     char getSymbol() const;
     bool isAlive() const;
+    long long distanceTo(const Creature& other) const;
 
     /* Получить урон: здоровье уменьшается, но не опускается ниже 0 */
     void takeDamage(int damage);

@@ -24,5 +24,11 @@ add_executable(
         Game.cpp
 )
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/level.txt
-               ${CMAKE_CURRENT_BINARY_DIR}/level.txt COPYONLY)
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /utf-8)
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/level.txt")
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/level.txt"
+                   "${CMAKE_CURRENT_BINARY_DIR}/level.txt" COPYONLY)
+endif()

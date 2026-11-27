@@ -62,6 +62,7 @@ private:
     /* Реализация IWorld: то, что монстры могут узнать о мире */
     const Map& getMap() const override;
     Creature&  getPlayer() override;
+    const Creature& getPlayer() const override;
     bool       isCellOccupied(int x, int y) const override;
     void       report(const std::string& message) override;
 
@@ -78,9 +79,12 @@ private:
     void     addMonster(int kind, int x, int y);
     void     spawnMonstersRandomly();
     void     spawnMonstersFromMap();
+    std::vector<const Monster*> livingMonsters() const;
 
     void draw() const;
     void printHelp() const;
+    void printSummary(int radius) const;
+    void changeMonsterBehavior(const std::vector<std::string>& words);
 
     Map                                  map;
     Hero                                 hero;
