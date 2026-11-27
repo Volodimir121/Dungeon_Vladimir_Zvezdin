@@ -1,6 +1,7 @@
 #include "Creature.h"
 
 #include <cctype>
+#include <cstdlib>
 #include <stdexcept>
 
 Creature::Creature(int x, int y, int maxHealth, char symbol)
@@ -33,6 +34,12 @@ int  Creature::getHealth() const    { return this->health; }
 int  Creature::getMaxHealth() const { return this->maxHealth; }
 char Creature::getSymbol() const    { return this->symbol; }
 bool Creature::isAlive() const      { return this->health > 0; }
+
+long long Creature::distanceTo(const Creature& other) const
+{
+    return std::abs(static_cast<long long>(this->x) - other.x) +
+           std::abs(static_cast<long long>(this->y) - other.y);
+}
 
 void Creature::takeDamage(int damage)
 {

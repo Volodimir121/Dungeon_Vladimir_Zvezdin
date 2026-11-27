@@ -1,6 +1,25 @@
 #pragma once
 #include "Creature.h"
 
+#include <functional>
+
+struct Direction
+{
+    int dx = 0;
+    int dy = 0;
+};
+
+using MoveRule = std::function<Direction(const Creature&, const IWorld&)>;
+
+namespace MonsterRules
+{
+    extern const MoveRule chase;
+    extern const MoveRule flee;
+    extern const MoveRule stay;
+    extern const MoveRule wander;
+    MoveRule drunk(MoveRule baseRule);
+}
+
 /*
  * Monster — абстрактный базовый класс монстров, наследник Creature.
  * Наследование оправдано: монстр действительно является существом и может
@@ -19,17 +38,13 @@ public:
     /* Сколько монстров было создано за всё время работы программы */
     static int getTotalCreated();
 
+    void setMoveRule(MoveRule rule);
+    void takeTurn(IWorld& world) override final;
+    int getAttackDamage() const;
+    bool canAttack(const Creature& player) const;
+
 protected:
-    Monster(int x, int y, int maxHealth, char symbol, int attackDamage);
-
-    /*
-     * Атаковать игрока, если он стоит в соседней клетке по горизонтали или вертикали.
-     * Возвращает true, если атака состоялась.
-     */
-    bool attackIfAdjacent(IWorld& world);
-
-    /* Шаг на (dx, dy), если карта пускает и клетка свободна. true — шаг сделан. */
-    bool tryStep(int dx, int dy, IWorld& world);
+    Monster(int x, int y, int maxHealth, char symbol, int attackDamage, MoveRule rule);
 
 private:
     /*
@@ -43,6 +58,7 @@ private:
     inline static int totalCreated = 0;
 
     int attackDamage;
+    MoveRule moveRule;
 };
 
 /* Зомби: преследует героя, если тот ближе VISION_RADIUS клеток, и бьёт вплотную */
@@ -52,7 +68,6 @@ public:
     static constexpr int VISION_RADIUS = 8;
 
     Zombie(int x, int y);
-    void takeTurn(IWorld& world) override;
     std::string getName() const override;
 };
 
@@ -61,7 +76,6 @@ class Bat final : public Monster
 {
 public:
     Bat(int x, int y);
-    void takeTurn(IWorld& world) override;
     std::string getName() const override;
 };
 
@@ -70,6 +84,5 @@ class Guard final : public Monster
 {
 public:
     Guard(int x, int y);
-    void takeTurn(IWorld& world) override;
     std::string getName() const override;
 };

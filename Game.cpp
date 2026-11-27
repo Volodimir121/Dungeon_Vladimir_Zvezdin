@@ -2,11 +2,20 @@
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
 #include <cstdlib>
 #include <iostream>
+#include <iterator>
+#include <numeric>
 #include <sstream>
+#include <unordered_map>
 #include <utility>
 #include <vector>
+
+namespace
+{
+constexpr int DEFAULT_SUMMARY_RADIUS = 3;
+}
 
 /* -------------------------------------------------------------------------- */
 /*  Конструкторы и деструктор                                                 */
@@ -56,6 +65,11 @@ const Map& Game::getMap() const
 }
 
 Creature& Game::getPlayer()
+{
+    return this->hero;
+}
+
+const Creature& Game::getPlayer() const
 {
     return this->hero;
 }
@@ -161,7 +175,7 @@ void Game::monstersTakeTurns()
 {
     /*
      * Практика 12, критерий 1: никакой проверки вида монстра.
-     * Каждый takeTurn() вызывается виртуально, поведение определяет реальный класс.
+     * Каждый takeTurn() вызывается виртуально и использует сохранённое правило движения.
      */
     for (const std::unique_ptr<Monster>& monster : this->monsters)
     {
@@ -243,13 +257,92 @@ bool Game::moveHero(int dx, int dy, const std::string& dirName)
 /*  Вывод                                                                     */
 /* -------------------------------------------------------------------------- */
 
+std::vector<const Monster*> Game::livingMonsters() const
+{
+    std::vector<const Monster*> all;
+    all.reserve(this->monsters.size());
+    std::transform(this->monsters.begin(), this->monsters.end(), std::back_inserter(all),
+                   [](const auto& monster) { return monster.get(); });
+
+    std::vector<const Monster*> living;
+    std::copy_if(all.begin(), all.end(), std::back_inserter(living),
+                 [](const Monster* monster) { return monster->isAlive(); });
+    return living;
+}
+
+void Game::printSummary(int radius) const
+{
+    const auto living = this->livingMonsters();
+    const auto isNear = [&hero = this->hero, radius](const Monster* monster)
+    {
+        return monster->distanceTo(hero) <= radius;
+    };
+    std::vector<const Monster*> nearby;
+    std::copy_if(living.begin(), living.end(), std::back_inserter(nearby), isNear);
+
+    struct Totals
+    {
+        long long health;
+        long long damage;
+        long long turnDamage;
+    };
+    const auto totals = std::accumulate(living.begin(), living.end(), Totals{0, 0, 0},
+        [&hero = this->hero](Totals total, const Monster* monster)
+        {
+            const int damage = monster->getAttackDamage();
+            total.health += monster->getHealth();
+            total.damage += damage;
+            total.turnDamage += monster->canAttack(hero) ? damage : 0;
+            return total;
+        });
+
+    std::cout << "Monsters alive: " << living.size()
+              << " | Nearby (radius " << radius << "): " << nearby.size()
+              << " | Total HP: " << totals.health
+              << " | Total attack damage: " << totals.damage
+              << " | Damage this turn (adjacent): " << totals.turnDamage << '\n';
+}
+
+void Game::changeMonsterBehavior(const std::vector<std::string>& words)
+{
+    static const std::unordered_map<std::string, MoveRule> rules{
+        {"chase", MonsterRules::chase}, {"flee", MonsterRules::flee},
+        {"stay", MonsterRules::stay}, {"wander", MonsterRules::wander}
+    };
+    const bool drunk = words.size() >= 2 && words[1] == "drunk";
+    const auto usage = [] {
+        std::cout << "Usage: behavior <chase|flee|stay|wander> or behavior drunk [base]\n";
+    };
+    if (words.size() < 2 || words.size() > (drunk ? 3u : 2u))
+    {
+        usage();
+        return;
+    }
+    std::string base = words[1];
+    if (drunk)
+    {
+        base = words.size() == 3 ? words[2] : "chase";
+    }
+    const auto found = rules.find(base);
+    if (found == rules.end())
+    {
+        usage();
+        return;
+    }
+
+    const MoveRule rule = drunk ? MonsterRules::drunk(found->second) : found->second;
+    for (const auto& monster : this->monsters)
+    {
+        monster->setMoveRule(rule);
+    }
+    std::cout << "Behavior set to " << (drunk ? "drunk " : "") << found->first
+              << " for " << this->monsters.size() << " monster(s).\n";
+}
+
 void Game::draw() const
 {
-    std::vector<const Creature*> creatures;
-    for (const std::unique_ptr<Monster>& monster : this->monsters)
-    {
-        creatures.push_back(monster.get());
-    }
+    const auto living = this->livingMonsters();
+    std::vector<const Creature*> creatures(living.begin(), living.end());
     creatures.push_back(&this->hero); /* герой рисуется последним, то есть поверх остальных */
 
     this->renderer.draw(this->map, creatures);
@@ -265,6 +358,9 @@ void Game::printHelp() const
               << "  go <dir>       - move in direction (e.g. go north)\n"
               << "  look      (l)  - redraw the dungeon map\n"
               << "  status    (st) - show hero and monster status\n"
+              << "  summary [N]    - monster totals; nearby radius defaults to 3\n"
+              << "  behavior <chase|flee|stay|wander> - set all monster movement rules\n"
+              << "  behavior drunk [base] - pick a random direction 1 time in 6 (base: chase)\n"
               << "  hit <N>        - take N damage (test takeDamage)\n"
               << "  test           - demonstrate stack, heap, and scope block (Practice 10)\n"
               << "  dtor           - demonstrate virtual destructor (Practice 12)\n"
@@ -498,6 +594,31 @@ bool Game::processCommand(const std::string& rawLine)
         this->hero.printStatus();
         std::cout << "Monsters alive: " << this->monsters.size()
                   << " (created in total: " << Monster::getTotalCreated() << ")\n";
+    }
+    else if (cmd == "summary")
+    {
+        int radius = DEFAULT_SUMMARY_RADIUS;
+        if (words.size() > 2)
+        {
+            std::cout << "Usage: summary [non-negative radius]\n";
+            return false;
+        }
+        if (words.size() == 2)
+        {
+            const std::string& argument = words[1];
+            const char* end = argument.data() + argument.size();
+            const auto parsed = std::from_chars(argument.data(), end, radius);
+            if (parsed.ec != std::errc{} || parsed.ptr != end || radius < 0)
+            {
+                std::cout << "Usage: summary [non-negative radius]\n";
+                return false;
+            }
+        }
+        this->printSummary(radius);
+    }
+    else if (cmd == "behavior")
+    {
+        this->changeMonsterBehavior(words);
     }
     else if (cmd == "hit")
     {
